@@ -1,4 +1,4 @@
-from retrochem.example_module import hello_smiles
+from retrochem import hello_smiles
 
 
 # Test the function
