@@ -10,8 +10,7 @@ molecule = st.text_input("Enter a molecule")
 
 if not molecule.strip():          # empty after removing spaces
         st.warning("⚠️ Please enter a molecule name (text).")
-else:
-        st.success(f"Got it: {molecule}")
+
 
 
 
