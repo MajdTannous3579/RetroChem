@@ -1,0 +1,5 @@
+primaryColor = "#2E86AB"
+backgroundColor = "#DFF7DF"           # now a soft pastel green
+secondaryBackgroundColor = "#E8EEF2"
+textColor = "#2F3E46"
+font = "sans serif"
