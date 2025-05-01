@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#2E86AB"              # buttons, switches
+backgroundColor = "#F4F7F9"           # page background
+secondaryBackgroundColor = "#E8EEF2"  # sidebar background
+textColor = "#2F3E46"                 # main text
+font = "sans serif"                   # options: "sans serif", "serif", "monospace"
