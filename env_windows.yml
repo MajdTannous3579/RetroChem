@@ -278,6 +278,7 @@ dependencies:
       - retrochem==0.0.1
       - smmap==5.0.2
       - streamlit==1.45.0
+      - streamlit-ketcher==0.0.1
       - tenacity==9.1.2
       - toml==0.10.2
       - watchdog==6.0.0
