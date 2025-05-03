@@ -2,21 +2,19 @@ import streamlit as st
 from streamlit_ketcher import st_ketcher  # type: ignore
 
 from retrochem.functions import name_to_smiles, canonicalize_smiles 
+import reaction_database as rd
 
-# ─── 1) PAGE CONFIG ───────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="RetroChem",
-    layout="wide",     # give the main area full width
+    layout="wide",
     page_icon="🧪",
 )
 
-# ─── 2) SIDEBAR ────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.header("🔬 Input Mode")
-    mode = st.radio("", ["Name", "Draw structure"])
-
-# ─── 3) MAIN ──────────────────────────────────────────────────────────────────
+# ─── 2) MAIN ──────────────────────────────────────────────────────────────────
 st.title("RetroChem - Your Organic Chemistry Guide")
+
+# Input mode selector at top (no sidebar)
+mode = st.radio("🔬 Select input mode:", ["Name", "Draw structure"], horizontal=True)
 
 smiles_input = ""
 run = False
@@ -35,7 +33,6 @@ if mode == "Name":
             st.warning("⚠️ Please enter a molecule name.")
 else:
     st.subheader("Draw your molecule")
-    # Full‐width sketcher; height chosen so Apply is visible
     sk_smiles = st_ketcher("", height=450)
     if st.button("🔄 Retrosynthesis"):
         run = True
