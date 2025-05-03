@@ -1,8 +1,7 @@
 import streamlit as st
 from streamlit_ketcher import st_ketcher  # type: ignore
 
-from retrochem.functions import name_to_smiles, canonicalize_smiles
-from retrochem.example_module import hello_smiles
+from retrochem.functions import name_to_smiles, canonicalize_smiles 
 
 # ─── 1) PAGE CONFIG ───────────────────────────────────────────────────────────
 st.set_page_config(
@@ -50,10 +49,8 @@ if run and smiles_input:
     try:
         # Canonicalize & run your backend
         canon = canonicalize_smiles(smiles_input)
-        result = hello_smiles(canon)
     except Exception as e:
         st.error(f"❌ Error during retrosynthesis:\n{e}")
     else:
         st.markdown("---")
         st.header("🧩 Retrosynthesis Output")
-        st.success(result)
