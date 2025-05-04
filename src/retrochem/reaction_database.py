@@ -12,7 +12,7 @@ def reverse_reaction_generator(reaction_smart: str)->Callable[[str], str | None]
         if not prods: # if no products could be generated
             return None
         first = prods[0] # FIXME: recheck if all tuples
-        combo = Chem.CombineMols( first[0], Chem.CombineMols(first[1], first[2]))
+        combo = Chem.CombineMols(first[i] for i in range(len(first)))
         return Chem.MolToSmiles(combo, canonical=True)
     return reverser_to_smiles
 
