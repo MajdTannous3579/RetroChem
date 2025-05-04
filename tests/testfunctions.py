@@ -1,4 +1,4 @@
-
+import pytest 
 from rdkit import Chem 
 from rdkit.Chem import Draw 
 from rdkit.Chem import rdChemReactions as Reac
@@ -33,8 +33,8 @@ def reverse_acetalisation(smiles: str) -> str | None:
         return None
 
     # Take the first product tuple, merge into one combined molecule
-    first = reactant[0]                  # (prod0_mol, prod1_mol, prod2_mol)
-    combo = Chem.CombineMols(first[0], Chem.CombineMols(first[1], first[2]))
+    first = prods[0]                  # (prod0_mol, prod1_mol, prod2_mol)
+    combo = Chem.CombineMols( first[0], Chem.CombineMols(first[1], first[2]))
     return Chem.MolToSmiles(combo, canonical=True)
 
 

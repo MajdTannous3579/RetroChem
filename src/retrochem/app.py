@@ -1,59 +1,61 @@
 import streamlit as st
 from streamlit_ketcher import st_ketcher  # type: ignore
+from rdkit import Chem
+from rdkit.Chem.Draw import MolToImage
 
-from retrochem.functions import name_to_smiles, canonicalize_smiles
-from retrochem.example_module import hello_smiles
+from retrochem.functions import name_to_smiles, canonicalize_smiles 
+import retrochem.reaction_database as rd
 
-# ─── 1) PAGE CONFIG ───────────────────────────────────────────────────────────
+# ─── 1) PAGE CONFIG & TITLE ──────────────────────────────────────────────────
 st.set_page_config(
     page_title="RetroChem",
-    layout="wide",     # give the main area full width
+    layout="wide",
     page_icon="🧪",
 )
-
-# ─── 2) SIDEBAR ────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.header("🔬 Input Mode")
-    mode = st.radio("", ["Name", "Draw structure"])
-
-# ─── 3) MAIN ──────────────────────────────────────────────────────────────────
 st.title("RetroChem - Your Organic Chemistry Guide")
+st.subheader("🔬 Input Molecule")
+mode = st.radio("Choose input mode:", ["Name", "Draw structure"], horizontal=True)
 
 smiles_input = ""
-run = False
-
+# ─── 2) INPUT SECTION ─────────────────────────────────────────────────────────
 if mode == "Name":
-    st.subheader("Enter a molecule name")
-    raw_name = st.text_input("Name of molecule")
-    if st.button("🔄 Retrosynthesis"):
-        run = True
-        if raw_name:
-            try:
-                smiles_input = name_to_smiles(raw_name)
-            except Exception as e:
-                st.error(f"❌ Name → SMILES conversion failed:\n{e}")
-        else:
-            st.warning("⚠️ Please enter a molecule name.")
-else:
-    st.subheader("Draw your molecule")
-    # Full‐width sketcher; height chosen so Apply is visible
-    sk_smiles = st_ketcher("", height=450)
-    if st.button("🔄 Retrosynthesis"):
-        run = True
-        if sk_smiles:
-            smiles_input = sk_smiles
-        else:
-            st.warning("⚠️ Please draw a molecule and click Apply.")
+    st.subheader("🔬 Input Molecule by Name")
+    raw_name = st.text_input("Name of molecule", key="name_input")
+    if raw_name:
+        try:
+            smiles_input = name_to_smiles(raw_name)
+            st.write("SMILES:", smiles_input)
+            mol = Chem.MolFromSmiles(smiles_input)
+            if mol:
+                img = MolToImage(mol, size=(200, 200))
+                st.image(img)
+        except Exception as e:
+            st.error(f"❌ Name → SMILES conversion failed:\n{e}")
 
-# ─── 4) RUN & OUTPUT ───────────────────────────────────────────────────────────
-if run and smiles_input:
-    try:
-        # Canonicalize & run your backend
-        canon = canonicalize_smiles(smiles_input)
-        result = hello_smiles(canon)
-    except Exception as e:
-        st.error(f"❌ Error during retrosynthesis:\n{e}")
+
+else:
+    st.subheader("🔬 Draw Structure")
+    smiles_input = st_ketcher("", height=450)
+    if smiles_input:
+        st.write("SMILES:", smiles_input)
+        mol2 = Chem.MolFromSmiles(smiles_input)
+        if mol2:
+            img2 = MolToImage(mol2, size=(200, 200))
+            st.image(img2)
+
+st.markdown("---")  # divider before run
+
+# ─── 3) RUN & OUTPUT ───────────────────────────────────────────────────────────
+if st.button("🔄 Retrosynthesis"):
+    # Choose input preference: drawn > named
+    if not smiles_input:
+        st.warning("⚠️ Please provide a molecule via name or drawing.")
     else:
+        canon = canonicalize_smiles(smiles_input)
+        result = rd.list_reactants(canon)
         st.markdown("---")
         st.header("🧩 Retrosynthesis Output")
-        st.success(result)
+        if not result:
+            st.info("No disconnection rules matched.")
+        for products in result:
+            st.image(MolToImage(Chem.MolFromSmiles(products)))
