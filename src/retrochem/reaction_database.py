@@ -12,8 +12,11 @@ def reverse_reaction_generator(reaction_smart: str)->Callable[[str], str | None]
         if not prods: # if no products could be generated
             return None
         first = prods[0] # FIXME: recheck if all tuples
-        combo = Chem.CombineMols( first[0], Chem.CombineMols(first[1], first[2]))
-        return Chem.MolToSmiles(combo, canonical=True)
+        first_smiles = []
+        for mol in first:
+            first_smiles.append(Chem.MolToSmiles(mol, canonical = True))
+        combo = ".".join(first_smiles)
+        return combo
     return reverser_to_smiles
 
 REACTION_DATABASE: List[str] = [
@@ -36,3 +39,4 @@ REACTION_REVERSERS: List[Callable[[str], str | None]] = [
 
 def list_reactants(smiles: str)->list[str]:
     return list(filter(lambda x: x is not None, [fn(smiles) for fn in REACTION_REVERSERS]))
+
