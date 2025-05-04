@@ -30,6 +30,3 @@ REACTION_REVERSERS: List[Callable[[str], str | None]] = [
 def list_reactants(smiles: str)->list[str]:
     return list(filter(lambda x: x is not None, [fn(smiles) for fn in REACTION_REVERSERS]))
 
-
-if __name__ == "__main__":
-    print(fn("CC(C)(OC)OC") for fn in REACTION_REVERSERS)
