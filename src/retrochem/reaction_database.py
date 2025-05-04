@@ -13,19 +13,16 @@ def reverse_reaction_generator(reaction_smart: str)->Callable[[str], str | None]
             return None
         first = prods[0] # FIXME: recheck if all tuples
         combo = Chem.CombineMols( first[0], Chem.CombineMols(first[1], first[2]))
-        print(combo)
         return Chem.MolToSmiles(combo, canonical=True)
     return reverser_to_smiles
 
 REACTION_DATABASE: List[str] = [
-    "[C:1](-O[*:2])(-O[*:3])-[!O:4]>>[C:1](=O)-[!O:4].O[*:2].O[*:3]",
-    "[C:1](-O[*:2])(-O[*:3])-[!O:4]>>[C:1](=O)-[!O:4].O[*:2].O[*:3]"
+    "[C:1](-O[*:2])(-O[*:3])-[!O:4]>>[C:1](=O)-[!O:4].O[*:2].O[*:3]", #reverse acetilisation
 ]
 
 REACTION_REVERSERS: List[Callable[[str], str | None]] = [
     reverse_reaction_generator(i) for i in REACTION_DATABASE
 ]
 
-if __name__ == '__main__':
-    test = "CC(C)(OC)OC"
-    print(list(filter(lambda x: x is not None, [fn(test) for fn in REACTION_REVERSERS])))
+def list_reactants(smiles: str)->list[str]:
+    return list(filter(lambda x: x is not None, [fn(smiles) for fn in REACTION_REVERSERS]))
