@@ -3,7 +3,7 @@ from streamlit_ketcher import st_ketcher  # type: ignore
 from rdkit import Chem
 from rdkit.Chem.Draw import MolToImage
 
-from retrochem.functions import name_to_smiles, canonicalize_smiles 
+from retrochem.functions import name_to_smiles, canonicalize_smiles
 import retrochem.reaction_database as rd
 
 # ─── PAGE CONFIG & TITLE ─────────────────────────────────────────────────────
@@ -12,149 +12,112 @@ st.set_page_config(
     layout="wide",
     page_icon="🧪",
 )
-st.title("RetroChem - Your Organic Chemistry Guide")
+st.title("RetroChem – Your Organic Chemistry Guide")
 
-# Initialize session state
-if 'reactant_list' not in st.session_state:
-    st.session_state['reactant_list'] = None
+# ─── SESSION STATE INITIALIZATION ────────────────────────────────────────────
 if 'selected_smiles' not in st.session_state:
     st.session_state['selected_smiles'] = None
+if 'reactant_list' not in st.session_state:
+    st.session_state['reactant_list'] = None
+if 'combos' not in st.session_state:
+    st.session_state['combos'] = []
+if 'history' not in st.session_state:
+    st.session_state['history'] = []
 
-# Display currently selected reactant for next retro step
-if st.session_state['selected_smiles']:
+# ─── DISPLAY CURRENT TARGET & BACK BUTTON ────────────────────────────────────
+if st.session_state.selected_smiles:
     st.subheader("🔄 Current molecule for retrosynthesis")
-    sel = st.session_state['selected_smiles']
-    st.write("SMILES:", sel)
-    mol_sel = Chem.MolFromSmiles(sel)
-    if mol_sel:
-        st.image(MolToImage(mol_sel, size=(200,200)))
+    smi = st.session_state.selected_smiles
+    st.write("SMILES:", smi)
+    mol = Chem.MolFromSmiles(smi)
+    if mol:
+        st.image(MolToImage(mol, size=(200,200)))
+
+    # Back button
+    if st.session_state.history:
+        if st.button("⬅️ Back"):
+            prev = st.session_state.history.pop()
+            st.session_state.selected_smiles = prev
+            st.session_state.reactant_list = None
+            # recompute options for prev
+            canon = canonicalize_smiles(prev)
+            st.session_state.combos = rd.list_reactants(canon)
     st.markdown("---")
 
-# ─── INPUT MODE SELECTION ─────────────────────────────────────────────────────
+# ─── INPUT MODE (ONLY BEFORE FIRST RETRO) ────────────────────────────────────
 st.subheader("🔬 Input Molecule")
 mode = st.radio("Choose input mode:", ["Name", "Draw structure"], horizontal=True)
-
 smiles_input = ""
 
-# ─── NAME INPUT ───────────────────────────────────────────────────────────────
 if mode == "Name":
-    st.subheader("By Name")
-    raw_name = st.text_input("Name of molecule", key="name_input")
+    raw_name = st.text_input("Name of molecule")
     if raw_name:
         try:
             smiles_input = name_to_smiles(raw_name)
             st.write("SMILES:", smiles_input)
-            mol = Chem.MolFromSmiles(smiles_input)
-            if mol:
-                st.image(MolToImage(mol, size=(200, 200)))
+            mol0 = Chem.MolFromSmiles(smiles_input)
+            if mol0:
+                st.image(MolToImage(mol0, size=(200,200)))
         except Exception as e:
-            st.error(f"❌ Name → SMILES conversion failed:\n{e}")
-
-# ─── DRAW STRUCTURE INPUT ─────────────────────────────────────────────────────
+            st.error(f"❌ Name → SMILES failed: {e}")
 else:
-    st.subheader("Draw Structure")
-    drawn = st_ketcher("", height=450, key="draw_input")
+    drawn = st_ketcher("", height=400)
     if drawn:
         smiles_input = drawn
         st.write("SMILES:", smiles_input)
-        mol2 = Chem.MolFromSmiles(smiles_input)
-        if mol2:
-            st.image(MolToImage(mol2, size=(200, 200)))
+        mol0 = Chem.MolFromSmiles(smiles_input)
+        if mol0:
+            st.image(MolToImage(mol0, size=(200,200)))
 
-st.markdown("---")  # divider before run
+st.markdown("---")
 
-# ─── RUN & OUTPUT ────────────────────────────────────────────────────────────
-if st.button("🔄 Retrosynthesis", key="retro_btn"):
-    if not smiles_input:
-        st.warning("⚠️ Please provide a molecule via the selected input mode.")
-    else:
-        # clear previous selections
-        st.session_state['reactant_list'] = None
-        st.session_state['selected_smiles'] = None
-        canon = canonicalize_smiles(smiles_input)
-        combos = rd.list_reactants(canon)
-        st.subheader("🧩 Retrosynthesis Options")
-        if not combos:
-            st.info("No disconnection rules matched.")
+# ─── INITIAL RETROSYNTHESIS BUTTON ────────────────────────────────────────────
+if st.session_state.selected_smiles is None:
+    if st.button("🔄 Retrosynthesis"):
+        if not smiles_input:
+            st.warning("⚠️ Provide a molecule first.")
         else:
-            # Display each combination option
-            cols = st.columns(len(combos))
-            for i, combo_smiles in enumerate(combos):
-                with cols[i]:
-                    mol_prod = Chem.MolFromSmiles(combo_smiles)
-                    if mol_prod:
-                        st.image(MolToImage(mol_prod, size=(200,200)))
-                    if st.button(f"Option {i+1}", key=f"opt_{i}"):
-                        # split into individual reactant SMILES
-                        parts = combo_smiles.split('.')
-                        st.session_state['reactant_list'] = parts
+            # kick off the first retrosynthesis
+            st.session_state.history = []
+            st.session_state.selected_smiles = smiles_input
+            st.session_state.reactant_list = None
+            canon = canonicalize_smiles(smiles_input)
+            st.session_state.combos = rd.list_reactants(canon)
 
-# ─── REACTANT SELECTION ───────────────────────────────────────────────────────
-if st.session_state['reactant_list']:
-    st.markdown("---")
-    st.subheader("🔹 Select a reactant to continue retrosynthesis")
+# ─── SHOW RETROSYNTHESIS OPTIONS ──────────────────────────────────────────────
+elif st.session_state.reactant_list is None:
+    st.subheader("🧩 Retrosynthesis Options")
+    combos = st.session_state.combos
+    if not combos:
+        st.info("No disconnection rules matched.")
+    else:
+        cols = st.columns(len(combos))
+        for i, combo in enumerate(combos):
+            with cols[i]:
+                mol = Chem.MolFromSmiles(combo)
+                if mol:
+                    st.image(MolToImage(mol, size=(200,200)))
+                if st.button(f"Option {i+1}"):
+                    parts = combo.split(".")
+                    st.session_state.reactant_list = parts
+
+# ─── SPLIT & SELECT NEXT REACTANT ─────────────────────────────────────────────
+else:
+    st.subheader("🔹 Select a reactant to continue")
+    parts = st.session_state.reactant_list
     cols2 = st.columns(len(parts))
-    for j, part_smiles in enumerate(parts):
+    for j, part in enumerate(parts):
         with cols2[j]:
-            st.write(part_smiles)
-            mol_part = Chem.MolFromSmiles(part_smiles)
-            if mol_part:
-                st.image(MolToImage(mol_part, size=(200,200)))
-            if st.button(f"Select {j+1}", key=f"sel_{j}"):
-                st.session_state['selected_smiles'] = part_smiles
-    
-
-
-# # ─── 1) PAGE CONFIG & TITLE ──────────────────────────────────────────────────
-# st.set_page_config(
-#     page_title="RetroChem",
-#     layout="wide",
-#     page_icon="🧪",
-# )
-# st.title("RetroChem - Your Organic Chemistry Guide")
-# st.subheader("🔬 Input Molecule")
-# mode = st.radio("Choose input mode:", ["Name", "Draw structure"], horizontal=True)
-
-# smiles_input = ""
-# # ─── 2) INPUT SECTION ─────────────────────────────────────────────────────────
-# if mode == "Name":
-#     st.subheader("🔬 Input Molecule by Name")
-#     raw_name = st.text_input("Name of molecule", key="name_input")
-#     if raw_name:
-#         try:
-#             smiles_input = name_to_smiles(raw_name)
-#             st.write("SMILES:", smiles_input)
-#             mol = Chem.MolFromSmiles(smiles_input)
-#             if mol:
-#                 img = MolToImage(mol, size=(200, 200))
-#                 st.image(img)
-#         except Exception as e:
-#             st.error(f"❌ Name → SMILES conversion failed:\n{e}")
-
-
-# else:
-#     st.subheader("🔬 Draw Structure")
-#     smiles_input = st_ketcher("", height=450)
-#     if smiles_input:
-#         st.write("SMILES:", smiles_input)
-#         mol2 = Chem.MolFromSmiles(smiles_input)
-#         if mol2:
-#             img2 = MolToImage(mol2, size=(200, 200))
-#             st.image(img2)
-
-# st.markdown("---")  # divider before run
-
-# # ─── 3) RUN & OUTPUT ───────────────────────────────────────────────────────────
-# if st.button("🔄 Retrosynthesis"):
-#     # Choose input preference: drawn > named
-#     if not smiles_input:
-#         st.warning("⚠️ Please provide a molecule via name or drawing.")
-#     else:
-#         canon = canonicalize_smiles(smiles_input)
-#         result = rd.list_reactants(canon)
-#         st.markdown("---")
-#         st.header("🧩 Retrosynthesis Output")
-#         if not result:
-#             st.info("No disconnection rules matched.")
-#         for products in result:
-#             st.image(MolToImage(Chem.MolFromSmiles(products)))
+            st.write(part)
+            mol_p = Chem.MolFromSmiles(part)
+            if mol_p:
+                st.image(MolToImage(mol_p, size=(200,200)))
+            if st.button(f"Retrosynthesize Reactant {j+1}"):
+                # push current to history
+                st.session_state.history.append(st.session_state.selected_smiles)
+                # set new target
+                st.session_state.selected_smiles = part
+                st.session_state.reactant_list = None
+                # compute its options
+                canon = canonicalize_smiles(part)
+                st.session_state.combos = rd.list_reactants(canon)
