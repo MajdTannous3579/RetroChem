@@ -48,8 +48,13 @@ REACTION_DATABASE: List[str] = [
     "[C:1]([Br:2])[C:3]([Br:4])>>[C:1]=[C:3].[Br:2][Br:4]", #addition of hallide to alkene
     "[C:1]([Cl:2])[C:3]([Cl:4])>>[C:1]=[C:3].[Cl:2][Cl:4]", #addition of hallide to alkene
     "[C:1]([I:2])[C:3]([I:4])>>[C:1]=[C:3].[I:2][I:4]", #addition of hallide to alkene
-    "[C:1]1O[C:2]1>>[C:1]=[C:2]" #epoxydation
+    "[C:1]1O[C:2]1>>[C:1]=[C:2]", #epoxydation
+    "[#6:1]=[#6:2][OX2H]>>[#6:1]([CX2]#C)[#6:2].[OH2]", #alkyne hydration 
+    "[#6:1]=C=C>>[#6:1]([CX2]#C)[#6:2]", #alkyne+base --> allene pH<30 
+    "[#6:1][#6:2][C:3]#[CH:4]>>[#6:1][C:3]#[C:4][#6:2]", #alkyne+base --> allene pH>30-35
+    "[#6:1][C:2]=[C:3][#6:4]>>[#6:1][C:2]#[C:3][#6:4].[H][H]" #lindlar hydrogenation alkynes 
     
+      
 ]
 
 
@@ -108,7 +113,12 @@ REACTION_CONDITIONS: List[dict] = [
     {"note": "not a radical addition but an ionic one"}, #hallide addition to alkene 
     {"note": "not a radical addition but an ionic one"}, #hallide addition to alkene 
     {"note": "not a radical addition but an ionic one"}, #hallide addition to alkene 
-    {"catalyst" : "m-CPBA"} #epoxydation
+    {"catalyst" : "m-CPBA"}, #epoxydation
+    {"solvent": "water" , "catalyst":"Hg+"}, #alkyne hydration
+    {"medium":"base", "pH":"< 30"}, #alkyne+base --> allene pH<30 
+    {"medium":"base", "pH":"> 30-35"}, #alkyne+base --> alkyne pushed pH>30-35
+    {"catalyst":"Pd"}, #lindlar hydrogenation alkynes 
+
 
 ]
 
