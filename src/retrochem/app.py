@@ -14,15 +14,51 @@ st.set_page_config(
 )
 st.title("RetroChem – Your Organic Chemistry Guide")
 
-# ─── SESSION STATE INITIALIZATION ────────────────────────────────────────────
+# ─── RESET CALLBACK ───────────────────────────────────────────────────────────
+def reset_all():
+    """Clear retrosynthesis state to start fresh"""
+    st.session_state.selected_smiles = None
+    st.session_state.reactant_list = None
+    st.session_state.combos = []
+    st.session_state.history = []
+
+# Show a Start Over button at the top
+st.button(
+    "🧹 Start Over",
+    key="reset",
+    on_click=reset_all,
+)
+
+# ─── OTHER CALLBACKS ──────────────────────────────────────────────────────────
+def start_retro(smi):
+    if not smi:
+        st.warning("⚠️ Provide a molecule first.")
+        return
+    reset_all()  # clear any previous state
+    st.session_state.selected_smiles = smi
+    canon = canonicalize_smiles(smi)
+    st.session_state.combos = rd.list_reactants(canon)
+
+def choose_combo(idx):
+    combo = st.session_state.combos[idx]
+    st.session_state.reactant_list = combo.split(".")
+
+def choose_reactant(part_smi):
+    st.session_state.history.append(st.session_state.selected_smiles)
+    st.session_state.selected_smiles = part_smi
+    st.session_state.reactant_list = None
+    canon = canonicalize_smiles(part_smi)
+    st.session_state.combos = rd.list_reactants(canon)
+
+# ─── SESSION STATE SETUP ───────────────────────────────────────────────────────
 if 'selected_smiles' not in st.session_state:
-    st.session_state['selected_smiles'] = None
+    st.session_state.selected_smiles = None
 if 'reactant_list' not in st.session_state:
-    st.session_state['reactant_list'] = None
+    st.session_state.reactant_list = None
 if 'combos' not in st.session_state:
-    st.session_state['combos'] = []
+    st.session_state.combos = []
 if 'history' not in st.session_state:
-    st.session_state['history'] = []
+    st.session_state.history = []
 
 # ─── DISPLAY CURRENT TARGET & BACK BUTTON ────────────────────────────────────
 if st.session_state.selected_smiles:
@@ -33,24 +69,22 @@ if st.session_state.selected_smiles:
     if mol:
         st.image(MolToImage(mol, size=(200,200)))
 
-    # Back button
     if st.session_state.history:
-        if st.button("⬅️ Back"):
+        if st.button("⬅️ Back", key="back"):
             prev = st.session_state.history.pop()
             st.session_state.selected_smiles = prev
             st.session_state.reactant_list = None
-            # recompute options for prev
-            canon = canonicalize_smiles(prev)
-            st.session_state.combos = rd.list_reactants(canon)
+            canon_prev = canonicalize_smiles(prev)
+            st.session_state.combos = rd.list_reactants(canon_prev)
     st.markdown("---")
 
-# ─── INPUT MODE (ONLY BEFORE FIRST RETRO) ────────────────────────────────────
+# ─── INPUT MODE (BEFORE FIRST RETRO) ──────────────────────────────────────────
 st.subheader("🔬 Input Molecule")
 mode = st.radio("Choose input mode:", ["Name", "Draw structure"], horizontal=True)
 smiles_input = ""
 
 if mode == "Name":
-    raw_name = st.text_input("Name of molecule")
+    raw_name = st.text_input("Name of molecule", key="name_input")
     if raw_name:
         try:
             smiles_input = name_to_smiles(raw_name)
@@ -61,7 +95,7 @@ if mode == "Name":
         except Exception as e:
             st.error(f"❌ Name → SMILES failed: {e}")
 else:
-    drawn = st_ketcher("", height=400)
+    drawn = st_ketcher("", height=400, key="draw_input")
     if drawn:
         smiles_input = drawn
         st.write("SMILES:", smiles_input)
@@ -71,20 +105,16 @@ else:
 
 st.markdown("---")
 
-# ─── INITIAL RETROSYNTHESIS BUTTON ────────────────────────────────────────────
+# ─── INITIAL RETROSYNTHESIS TRIGGER ───────────────────────────────────────────
 if st.session_state.selected_smiles is None:
-    if st.button("🔄 Retrosynthesis"):
-        if not smiles_input:
-            st.warning("⚠️ Provide a molecule first.")
-        else:
-            # kick off the first retrosynthesis
-            st.session_state.history = []
-            st.session_state.selected_smiles = smiles_input
-            st.session_state.reactant_list = None
-            canon = canonicalize_smiles(smiles_input)
-            st.session_state.combos = rd.list_reactants(canon)
+    st.button(
+        "🔄 Retrosynthesis",
+        key="start",
+        on_click=start_retro,
+        args=(smiles_input,),
+    )
 
-# ─── SHOW RETROSYNTHESIS OPTIONS ──────────────────────────────────────────────
+# ─── SHOW RETROSYNTHESIS OPTIONS ─────────────────────────────────────────────
 elif st.session_state.reactant_list is None:
     st.subheader("🧩 Retrosynthesis Options")
     combos = st.session_state.combos
@@ -97,9 +127,12 @@ elif st.session_state.reactant_list is None:
                 mol = Chem.MolFromSmiles(combo)
                 if mol:
                     st.image(MolToImage(mol, size=(200,200)))
-                if st.button(f"Option {i+1}"):
-                    parts = combo.split(".")
-                    st.session_state.reactant_list = parts
+                st.button(
+                    f"Option {i+1}",
+                    key=f"opt_{i}",
+                    on_click=choose_combo,
+                    args=(i,),
+                )
 
 # ─── SPLIT & SELECT NEXT REACTANT ─────────────────────────────────────────────
 else:
@@ -112,12 +145,9 @@ else:
             mol_p = Chem.MolFromSmiles(part)
             if mol_p:
                 st.image(MolToImage(mol_p, size=(200,200)))
-            if st.button(f"Retrosynthesize Reactant {j+1}"):
-                # push current to history
-                st.session_state.history.append(st.session_state.selected_smiles)
-                # set new target
-                st.session_state.selected_smiles = part
-                st.session_state.reactant_list = None
-                # compute its options
-                canon = canonicalize_smiles(part)
-                st.session_state.combos = rd.list_reactants(canon)
+            st.button(
+                f"Retrosynthesize Reactant {j+1}",
+                key=f"sel_{j}",
+                on_click=choose_reactant,
+                args=(part,),
+            )
