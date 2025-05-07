@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from streamlit_ketcher import st_ketcher  # type: ignore
 from rdkit import Chem
 from rdkit.Chem.Draw import MolToImage
@@ -40,7 +41,7 @@ def start_retro(smi):
     st.session_state.combos = rd.list_reactants(canon)
 
 def choose_combo(idx):
-    combo = st.session_state.combos[idx]
+    combo = [i[0] for i in st.session_state.combos][idx] #changed the variable "combos" that is here a tuple into the "true" combo like it is defined in the database file, kept it like this until here to keep track of history for both conditions and smarts and not have to separate them from the beginning
     st.session_state.reactant_list = combo.split(".")
 
 def choose_reactant(part_smi):
@@ -119,8 +120,10 @@ elif st.session_state.reactant_list is None:
     st.subheader("🧩 Retrosynthesis Options")
     combos = st.session_state.combos
     if not combos:
-        st.info("No disconnection rules matched.")
+        st.info("Your product is too simple to be retrosynthesized, or not in our database")
     else:
+        cond = [i[1] for i in combos]
+        combos = [i[0] for i in combos] #changed the variable "combos" that is here a tuple into the "true" combo like it is defined in the database file, kept it like this until here to keep track of history for both conditions and smarts and not have to separate them from the beginning
         cols = st.columns(len(combos))
         for i, combo in enumerate(combos):
             with cols[i]:
@@ -133,6 +136,12 @@ elif st.session_state.reactant_list is None:
                     on_click=choose_combo,
                     args=(i,),
                 )
+                keys   = list([i.capitalize() for i in cond[i].keys()])
+                values = list(cond[i].values())
+                df = pd.DataFrame({
+                    "Conditions": values,
+                }, index=keys)
+                st.table(df)
 
 # ─── SPLIT & SELECT NEXT REACTANT ─────────────────────────────────────────────
 else:
