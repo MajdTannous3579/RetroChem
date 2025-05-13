@@ -16,8 +16,7 @@ st.set_page_config(
 )
 st.title("RetroChem - Your Organic Chemistry Guide")
 
-
-# ─── RESET CALLBACK ───────────────────────────────────────────────────────────
+# ─── CALLBACK DEFINITIONS ─────────────────────────────────────────────────────
 def reset_all():
     """Clear retrosynthesis state to start fresh"""
     st.session_state.selected_smiles = None
@@ -26,14 +25,6 @@ def reset_all():
     st.session_state.combos = []
     st.session_state.history = []
 
-st.button(
-    "🧹 Start Over",
-    key="reset",
-    on_click=reset_all,
-)
-
-
-# ─── OTHER CALLBACKS ──────────────────────────────────────────────────────────
 def start_retro(smi, db):
     if not smi:
         st.warning("⚠️ Provide a molecule first.")
@@ -44,17 +35,14 @@ def start_retro(smi, db):
 
     reset_all()
     st.session_state.selected_smiles = smi
-    st.session_state.database = db
     canon = canonicalize_smiles(smi)
     st.session_state.combos = rd.list_reactants(canon, db)
-
 
 def choose_combo(idx):
     combo = [i[0] for i in st.session_state.combos][idx]
     st.session_state.reactant_list = combo.split(".")
 
-
-def Refresh_databases():
+def refresh_databases():
     for path in os.listdir("."):
         if not path.endswith(".db"):
             continue
@@ -63,10 +51,8 @@ def Refresh_databases():
             st.warning(f"⚠️ The database {path} could not be loaded")
         rd.register_database(db, path.removesuffix(".db"))
 
-
 def choose_database(db):
     st.session_state.database = db
-
 
 def choose_reactant(part_smi, db):
     st.session_state.history.append(st.session_state.selected_smiles)
@@ -74,7 +60,6 @@ def choose_reactant(part_smi, db):
     st.session_state.reactant_list = None
     canon = canonicalize_smiles(part_smi)
     st.session_state.combos = rd.list_reactants(canon, db)
-
 
 # ─── SESSION STATE SETUP ───────────────────────────────────────────────────────
 for key, default in [
@@ -87,49 +72,56 @@ for key, default in [
     if key not in st.session_state:
         st.session_state[key] = default
 
+# ─── SIDEBAR STATUS PANEL ─────────────────────────────────────────────────────
+with st.sidebar:
+    # Start Over button
+    st.button(
+        "🧹 Start Over",
+        key="reset",
+        on_click=reset_all,
+    )
+
+    st.header("🔍 Retrosynthesis Status")
+    # Current database
+    if st.session_state.database:
+        st.markdown(f"**Database:** {st.session_state.database}")
+    else:
+        st.markdown("**Database:** _(none selected)_")
+    # Current molecule
+    if st.session_state.selected_smiles:
+        st.markdown(f"**Molecule:** `{st.session_state.selected_smiles}`")
+        mol = Chem.MolFromSmiles(st.session_state.selected_smiles)
+        if mol:
+            st.image(MolToImage(mol, size=(150, 150)))
+    else:
+        st.markdown("**Molecule:** _(none entered)_")
+    # History
+    if st.session_state.history:
+        st.markdown("---")
+        st.subheader("History")
+        for prev in reversed(st.session_state.history):
+            st.write(prev)
 
 # ─── LOAD AND DISPLAY DATABASES ──────────────────────────────────────────────
 st.button(
     "Load and refresh available databases",
     key="load",
-    on_click=Refresh_databases,
+    on_click=refresh_databases,
 )
 
 db_names = list(rd.REACTION_DATABASES.keys())
 cols = st.columns(len(db_names))
-for i, database in enumerate(db_names):
+for i, db_name in enumerate(db_names):
     with cols[i]:
         st.button(
-            f"database: {database}",
+            f"database: {db_name}",
             key=f"database_{i}",
             on_click=choose_database,
-            args=(database,),
+            args=(db_name,),
         )
 
-
-# ─── DISPLAY CURRENT TARGET & BACK BUTTON ────────────────────────────────────
-if st.session_state.selected_smiles and st.session_state.database:
-    st.subheader("🔄 Current selected database for retrosynthesis")
-    st.write("Database:", st.session_state.database)
-
-    st.subheader("🔄 Current selected molecule for retrosynthesis")
-    smi = st.session_state.selected_smiles
-    st.write("SMILES:", smi)
-    mol = Chem.MolFromSmiles(smi)
-    if mol:
-        st.image(MolToImage(mol, size=(200, 200)))
-
-    if st.session_state.history:
-        if st.button("⬅️ Back", key="back"):
-            prev = st.session_state.history.pop()
-            st.session_state.selected_smiles = prev
-            st.session_state.reactant_list = None
-            canon_prev = canonicalize_smiles(prev)
-            st.session_state.combos = rd.list_reactants(canon_prev, st.session_state.database)
-    st.markdown("---")
-
-
 # ─── INPUT MODE (BEFORE FIRST RETRO) ──────────────────────────────────────────
+st.markdown("---")
 st.subheader("🔬 Input Molecule")
 mode = st.radio("Choose input mode:", ["Name", "Draw structure"], horizontal=True)
 smiles_input = ""
@@ -156,7 +148,6 @@ else:
 
 st.markdown("---")
 
-
 # ─── INITIAL RETROSYNTHESIS TRIGGER ───────────────────────────────────────────
 if st.session_state.selected_smiles is None:
     st.button(
@@ -166,7 +157,6 @@ if st.session_state.selected_smiles is None:
         args=(smiles_input, st.session_state.database),
     )
 
-
 # ─── SHOW RETROSYNTHESIS OPTIONS ─────────────────────────────────────────────
 elif st.session_state.reactant_list is None:
     st.subheader("🧩 Retrosynthesis Options")
@@ -174,8 +164,8 @@ elif st.session_state.reactant_list is None:
     if not combos:
         st.info("Your product is too simple to be retrosynthesized, or not in our database")
     else:
-        cond = [i[1] for i in combos]
-        smiles_list = [i[0] for i in combos]
+        cond = [c[1] for c in combos]
+        smiles_list = [c[0] for c in combos]
         cols = st.columns(len(smiles_list))
         for i, combo in enumerate(smiles_list):
             with cols[i]:
@@ -191,7 +181,6 @@ elif st.session_state.reactant_list is None:
                 keys = [k.capitalize() for k in cond[i].keys()]
                 values = list(cond[i].values())
                 st.table(pd.DataFrame({"Conditions": values}, index=keys))
-
 
 # ─── SPLIT & SELECT NEXT REACTANT ─────────────────────────────────────────────
 else:
