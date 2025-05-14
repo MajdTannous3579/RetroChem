@@ -11,18 +11,29 @@ RetroChem
 
 Final Project For Practical Programming in Chemistry
 
+## ✨ Features
+
+- **Name & Structure → SMILES**  
+  Convert any common or IUPAC name *and* drawn molecular structure into a SMILES string in one click.
+
+- **Rule-based Retrosynthesis**  
+  Match your target SMILES against a hand-written SMARTS library of fundamental organic disconnections to suggest possible reactants.
+
+- **Curated Organic Chemistry Database**  
+  Includes all the core reactions you learn in your bachelor’s curriculum—esters, amides, acetals, ketone hydrations, reductions, and more.
+
+- **Custom Database Support**  
+  Drop your own `.db` (SMARTS) file into the project root and load it at runtime to extend or override the default reaction set.
+
+
 ## 🔥 Usage
 
 ```python
 from mypackage import main_func
 
 # One line to rule them all
-result = main_func(data)
-```
-
-This usage example shows how to quickly leverage the package's main functionality with just one line of code (or a few lines of code). 
-After importing the `main_func` (to be renamed by you), you simply pass in your `data` and get the `result` (this is just an example, your package might have other inputs and outputs). 
-Short and sweet, but the real power lies in the detailed documentation.
+from functions.py import name_to_smiles, structure_to_smiles, canonicalize_smiles
+from retrochem.reaction_database reverse_reaction_generator, register_database, list_reactants
 
 ## 👩‍💻 Installation
 
@@ -73,7 +84,3 @@ To install the package, run
 ```
 (conda_env) $ pip install tox
 (conda_env) $ tox
-```
-
-
-
