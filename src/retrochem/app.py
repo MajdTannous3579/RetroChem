@@ -14,7 +14,6 @@ st.set_page_config(
     layout="wide",
     page_icon="🧪",
 )
-# Inline CSS: chem-green theme
 st.markdown(
     """
     <style>
@@ -29,6 +28,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ─── RERUN COMPATIBILITY ─────────────────────────────────────────────────────
+def rerun():
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
+
 # ─── SESSION STATE SETUP ──────────────────────────────────────────────────────
 for key, default in [
     ("page", "home"),
@@ -41,31 +47,40 @@ for key, default in [
     if key not in st.session_state:
         st.session_state[key] = default
 
-# ─── LANDING PAGE ─────────────────────────────────────────────────────────────
-if st.session_state.page == "home":
-    st.title("🧪 Welcome to RetroChem")
-    st.markdown("Your Organic Chemistry Retrosynthesis Assistant")
-    st.write("---")
-    st.markdown(
-        "Click below to begin drawing or naming your target molecule, then choose your database and start retrosynthesis."
-    )
-    if st.button("🔬 Start Retrosynthesis"):
-        st.session_state.page = "main"
-        st.experimental_rerun()
-    st.stop()
+# ─── DATABASE REFRESH ─────────────────────────────────────────────────────────
+def refresh_databases():
+    for path in os.listdir('.'):
+        if path.endswith('.db'):
+            db = rd.load_database(path)
+            if db is None:
+                st.warning(f"⚠️ Could not load {path}")
+            rd.register_database(db, path.removesuffix('.db'))
 
-# ─── MAIN APP TITLE ───────────────────────────────────────────────────────────
-st.title("RetroChem - Your Organic Chemistry Guide")
+# Auto-load on startup
+if not rd.REACTION_DATABASES:
+    refresh_databases()
 
 # ─── CALLBACKS ─────────────────────────────────────────────────────────────────
-
 def reset_all():
     """Clear all retrosynthesis state for a fresh start."""
-    for k in ["selected_smiles", "reactant_list", "database", "combos", "history"]:
-        st.session_state[k] = [] if k in ("combos", "history") else None
+    for k in ['selected_smiles', 'reactant_list', 'database', 'combos', 'history']:
+        st.session_state[k] = [] if k in ('combos', 'history') else None
 
 
-def start_retro(smi, db):
+def go_back():
+    """Return to the previous molecule in history."""
+    if st.session_state.history:
+        prev = st.session_state.history.pop()
+        st.session_state.selected_smiles = prev
+        st.session_state.reactant_list = None
+        canon = canonicalize_smiles(prev)
+        st.session_state.combos = rd.list_reactants(canon, st.session_state.database)
+    else:
+        st.warning("⚠️ No previous molecule to go back to.")
+
+
+def start_retro(smi):
+    db = st.session_state.database
     if not smi:
         st.warning("⚠️ Provide a molecule first.")
         return
@@ -83,36 +98,54 @@ def choose_combo(idx):
     st.session_state.reactant_list = combo.split('.')
 
 
-def refresh_databases():
-    for path in os.listdir('.'):
-        if path.endswith('.db'):
-            db = rd.load_database(path)
-            if db is None:
-                st.warning(f"⚠️ Could not load {path}")
-            rd.register_database(db, path.removesuffix('.db'))
-
-
-def choose_database(db):
-    st.session_state.database = db
-
-
-def choose_reactant(part_smi, db):
+def choose_reactant(part_smi):
+    db = st.session_state.database
+    # save current in history before diving deeper
     st.session_state.history.append(st.session_state.selected_smiles)
     st.session_state.selected_smiles = part_smi
     st.session_state.reactant_list = None
     canon = canonicalize_smiles(part_smi)
     st.session_state.combos = rd.list_reactants(canon, db)
 
-# ─── AUTO-LOAD DATABASES ON STARTUP ───────────────────────────────────────────
-if not rd.REACTION_DATABASES:
-    refresh_databases()
+# ─── LANDING PAGE ─────────────────────────────────────────────────────────────
+if st.session_state.page == "home":
+    st.title("🧪 Welcome to RetroChem")
+    st.markdown("Your Organic Chemistry Retrosynthesis Assistant")
+    st.write("---")
+    st.markdown(
+        "Click below to begin drawing or naming your target molecule, then choose your database and start retrosynthesis."
+    )
+    if st.button("🔬 Start Retrosynthesis"):
+        st.session_state.page = "main"
+        rerun()
+    st.stop()
 
-# ─── SIDEBAR: GLOBAL STATUS & CONTROLS ─────────────────────────────────────────
+# ─── MAIN APP TITLE ───────────────────────────────────────────────────────────
+st.title("RetroChem - Your Organic Chemistry Guide")
+
+# ─── SIDEBAR: GLOBAL CONTROLS & STATUS ────────────────────────────────────────
 with st.sidebar:
     st.button("🧹 Start Over", on_click=reset_all)
+    # back button
+    if st.session_state.history:
+        st.button("🔙 Back", on_click=go_back)
     st.write("---")
     st.header("🔍 Retrosynthesis Status")
     st.markdown(f"**Database:** {st.session_state.database or '_(none selected)_'}")
+    # persistent database selector
+    dbs = list(rd.REACTION_DATABASES.keys())
+    if dbs:
+        chosen = st.selectbox(
+            "Choose Database", dbs,
+            index=dbs.index(st.session_state.database) if st.session_state.database in dbs else 0,
+            key="db_selector",
+            on_change=lambda: st.session_state.update({'database': st.session_state.db_selector})
+        )
+        st.session_state.database = st.session_state.db_selector
+    else:
+        st.info("No .db files found.")
+    st.write("---")
+    # show current molecule
     if st.session_state.selected_smiles:
         st.markdown(f"**Molecule:** `{st.session_state.selected_smiles}`")
         mol = Chem.MolFromSmiles(st.session_state.selected_smiles)
@@ -120,28 +153,12 @@ with st.sidebar:
             st.image(MolToImage(mol, size=(150, 150)))
     else:
         st.markdown("**Molecule:** _(none entered)_")
+    # show history list
     if st.session_state.history:
         st.write("---")
         st.subheader("History")
         for prev in reversed(st.session_state.history):
             st.write(prev)
-
-# ─── DATABASE SELECTION ───────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown("## 🔍 Database Selection")
-st.caption("Select which reaction database to use for your retrosynthesis.")
-col1, col2 = st.columns([1, 3])
-with col1:
-    st.button("Load/Refresh DBs", on_click=refresh_databases)
-with col2:
-    dbs = list(rd.REACTION_DATABASES.keys())
-    if dbs:
-        cols = st.columns(len(dbs))
-        for i, d in enumerate(dbs):
-            with cols[i]:
-                st.button(d, on_click=choose_database, args=(d,))
-    else:
-        st.info("No .db files found.")
 
 # ─── INPUT MOLECULE SECTION ───────────────────────────────────────────────────
 st.markdown("---")
@@ -169,14 +186,13 @@ else:
         if mol0:
             st.image(MolToImage(mol0, size=(200, 200)))
 
-# ─── RETROSYNTHESIS TRIGGER ───────────────────────────────────────────────────
+# ─── RETROSYNTHESIS NAVIGATION ────────────────────────────────────────────────
 st.markdown("---")
 st.markdown("## 🔄 Retrosynthesis")
 st.caption("When you’re ready, press to compute possible reactants.")
 if st.session_state.selected_smiles is None:
-    st.button("🔄 Start", on_click=start_retro, args=(smiles_input, st.session_state.database))
+    st.button("🔄 Start", on_click=start_retro, args=(smiles_input,))
 
-# ─── RETROSYNTHESIS OPTIONS ──────────────────────────────────────────────────
 elif st.session_state.reactant_list is None:
     st.markdown("## 🧩 Retrosynthesis Options")
     st.caption("Select one of the reactant options below.")
@@ -196,7 +212,6 @@ elif st.session_state.reactant_list is None:
                 df = pd.DataFrame({"Conditions": list(conds[i].values())}, index=[k.capitalize() for k in conds[i].keys()])
                 st.table(df)
 
-# ─── NEXT REACTANT ────────────────────────────────────────────────────────────
 else:
     st.markdown("## 🔹 Next Reactant")
     st.caption("Choose a fragment for further retrosynthesis.")
@@ -208,4 +223,4 @@ else:
             m = Chem.MolFromSmiles(p)
             if m:
                 st.image(MolToImage(m, size=(200, 200)))
-            st.button(f"Reactant {j+1}", on_click=choose_reactant, args=(p, st.session_state.database))
+            st.button(f"Reactant {j+1}", on_click=choose_reactant, args=(p,))
