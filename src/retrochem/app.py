@@ -66,7 +66,6 @@ def reset_all():
     for k in ['selected_smiles', 'reactant_list', 'database', 'combos', 'history']:
         st.session_state[k] = [] if k in ('combos', 'history') else None
 
-
 def go_back():
     """Return to the previous molecule in history."""
     if st.session_state.history:
@@ -78,8 +77,8 @@ def go_back():
     else:
         st.warning("⚠️ No previous molecule to go back to.")
 
-
 def start_retro(smi):
+    """Run retrosynthesis on a new target, preserving history."""
     db = st.session_state.database
     if not smi:
         st.warning("⚠️ Provide a molecule first.")
@@ -87,20 +86,21 @@ def start_retro(smi):
     if not db:
         st.warning("⚠️ Choose a database first.")
         return
-    reset_all()
+    # if we're already on a target, push it to history
+    if st.session_state.selected_smiles:
+        st.session_state.history.append(st.session_state.selected_smiles)
+    # set up new target
     st.session_state.selected_smiles = smi
+    st.session_state.reactant_list = None
     canon = canonicalize_smiles(smi)
     st.session_state.combos = rd.list_reactants(canon, db)
-
 
 def choose_combo(idx):
     combo = st.session_state.combos[idx][0]
     st.session_state.reactant_list = combo.split('.')
 
-
 def choose_reactant(part_smi):
     db = st.session_state.database
-    # save current in history before diving deeper
     st.session_state.history.append(st.session_state.selected_smiles)
     st.session_state.selected_smiles = part_smi
     st.session_state.reactant_list = None
@@ -126,13 +126,11 @@ st.title("RetroChem - Your Organic Chemistry Guide")
 # ─── SIDEBAR: GLOBAL CONTROLS & STATUS ────────────────────────────────────────
 with st.sidebar:
     st.button("🧹 Start Over", on_click=reset_all)
-    # back button
     if st.session_state.history:
         st.button("🔙 Back", on_click=go_back)
     st.write("---")
     st.header("🔍 Retrosynthesis Status")
     st.markdown(f"**Database:** {st.session_state.database or '_(none selected)_'}")
-    # persistent database selector
     dbs = list(rd.REACTION_DATABASES.keys())
     if dbs:
         chosen = st.selectbox(
@@ -145,7 +143,6 @@ with st.sidebar:
     else:
         st.info("No .db files found.")
     st.write("---")
-    # show current molecule
     if st.session_state.selected_smiles:
         st.markdown(f"**Molecule:** `{st.session_state.selected_smiles}`")
         mol = Chem.MolFromSmiles(st.session_state.selected_smiles)
@@ -153,7 +150,6 @@ with st.sidebar:
             st.image(MolToImage(mol, size=(150, 150)))
     else:
         st.markdown("**Molecule:** _(none entered)_")
-    # show history list
     if st.session_state.history:
         st.write("---")
         st.subheader("History")
@@ -163,7 +159,7 @@ with st.sidebar:
 # ─── INPUT MOLECULE SECTION ───────────────────────────────────────────────────
 st.markdown("---")
 st.markdown("## 🧬 Input Molecule")
-st.caption("Draw your molecule or enter its IUPAC name here, then click Start below.")
+st.caption("Draw your molecule or enter its IUPAC name here, then click Retrosynthesize.")
 mode = st.radio("Mode:", ["Name", "Draw"], horizontal=True)
 smiles_input = None
 if mode == "Name":
@@ -189,11 +185,12 @@ else:
 # ─── RETROSYNTHESIS NAVIGATION ────────────────────────────────────────────────
 st.markdown("---")
 st.markdown("## 🔄 Retrosynthesis")
-st.caption("When you’re ready, press to compute possible reactants.")
-if st.session_state.selected_smiles is None:
-    st.button("🔄 Start", on_click=start_retro, args=(smiles_input,))
+# always allow retrosynthesis on the current input
+if smiles_input:
+    st.button("🔄 Retrosynthesize", on_click=start_retro, args=(smiles_input,))
 
-elif st.session_state.reactant_list is None:
+# show options or next fragments
+if st.session_state.selected_smiles and st.session_state.reactant_list is None:
     st.markdown("## 🧩 Retrosynthesis Options")
     st.caption("Select one of the reactant options below.")
     combos = st.session_state.combos
@@ -209,10 +206,13 @@ elif st.session_state.reactant_list is None:
                 if m:
                     st.image(MolToImage(m, size=(200, 200)))
                 st.button(f"Option {i+1}", on_click=choose_combo, args=(i,))
-                df = pd.DataFrame({"Conditions": list(conds[i].values())}, index=[k.capitalize() for k in conds[i].keys()])
+                df = pd.DataFrame(
+                    {"Conditions": list(conds[i].values())},
+                    index=[k.capitalize() for k in conds[i].keys()],
+                )
                 st.table(df)
 
-else:
+elif st.session_state.reactant_list:
     st.markdown("## 🔹 Next Reactant")
     st.caption("Choose a fragment for further retrosynthesis.")
     parts = st.session_state.reactant_list
