@@ -18,13 +18,14 @@ def reverse_reaction_generator(reaction_smart: SmartsConditionsPair)->Callable[[
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             raise ValueError("Invalid SMILES")
-        prods = rxn.RunReactants((mol,))
+        try:
+            prods = rxn.RunReactants((mol,))
+        except Exception:
+            return None
         if not prods: # if no products could be generated
             return None
-        first = prods[0] # FIXME: recheck if all tuples
-        first_smiles = []
-        for mol in first:
-            first_smiles.append(Chem.MolToSmiles(mol, canonical = True))
+        first = prods[0]
+        first_smiles = sorted(Chem.MolToSmiles(m, canonical=True) for m in first)
         combo = ".".join(first_smiles)
         return (combo, cond)
     return reverser_to_smiles
@@ -87,4 +88,9 @@ def list_reactants(smiles: str, database: str)->List[SmilesConditionsPair] | Non
     get = REACTION_REVERSERS.get(database)
     if get is None:
         return None
-    return list(filter(lambda x: x is not None, [fn(smiles) for fn in get]))
+    ret = []
+    for fn in get:
+        val = fn(smiles)
+        if val is not None:
+            ret.append(val)
+    return ret
