@@ -32,8 +32,6 @@ st.markdown(
 def rerun():
     if hasattr(st, "rerun"):
         st.rerun()
-    else:
-        st.experimental_rerun()
 
 # ─── SESSION STATE SETUP ──────────────────────────────────────────────────────
 for key, default in [
@@ -54,7 +52,8 @@ def refresh_databases():
             db = rd.load_database(path)
             if db is None:
                 st.warning(f"⚠️ Could not load {path}")
-            rd.register_database(db, path.removesuffix('.db'))
+            else:
+                rd.register_database(db, path.removesuffix('.db'))
 
 # Auto-load on startup
 if not rd.REACTION_DATABASES:
