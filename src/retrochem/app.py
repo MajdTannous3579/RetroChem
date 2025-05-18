@@ -5,7 +5,7 @@ from streamlit_ketcher import st_ketcher  # type: ignore
 from rdkit import Chem
 from rdkit.Chem.Draw import MolToImage
 
-from retrochem.functions import name_to_smiles, canonicalize_smiles
+from retrochem.preliminary_functions import name_to_smiles, canonicalize_smiles
 import retrochem.reaction_database as rd
 
 # ─── PAGE CONFIG & CUSTOM CSS THEME ─────────────────────────────────────────
@@ -233,7 +233,7 @@ elif st.session_state.reactant_list:
 if st.session_state.page == "builder":
     st.title("🛠️ Custom Database Builder")
 
-# ─── Session State Init ─────────────────────────────────────────────
+    # ─── Session State Init ─────────────────────────────────────────────
     if "builder_reactants" not in st.session_state:
         st.session_state.builder_reactants = []
     if "builder_product" not in st.session_state:
@@ -274,7 +274,7 @@ if st.session_state.page == "builder":
         else:
             st.session_state.builder_product = mol_smiles
 
-# ─── Preview Reaction ───────────────────────────────────────────────
+    # ─── Preview Reaction ───────────────────────────────────────────────
     if st.session_state.builder_product or st.session_state.builder_reactants:
         st.markdown("## 👁️ Reaction Preview")
 
@@ -295,7 +295,7 @@ if st.session_state.page == "builder":
             with cols[-1]:
                 st.info("Product not yet defined")
 
-# ─── Conditions ─────────────────────────────────────────────────────
+    # ─── Conditions ─────────────────────────────────────────────────────
     st.markdown("### ⚙️ Conditions")
     conds = st.text_area("Conditions (key: value per line)")
     parsed_conds = {}
@@ -305,7 +305,7 @@ if st.session_state.page == "builder":
                 k, v = map(str.strip, line.split(':', 1))
                 parsed_conds[k] = v
 
-# ─── Final Add Button ───────────────────────────────────────────────
+    # ─── Final Add Button ───────────────────────────────────────────────
     if st.button("🧪 Save Reaction to Database"):
         if not db_name:
             st.error("Please enter a database name.")
@@ -330,7 +330,7 @@ if st.session_state.page == "builder":
             except Exception as e:
                 st.error(f"Failed to save: {e}")
 
-# ─── Navigation ─────────────────────────────────────────────────────
+    # ─── Navigation ─────────────────────────────────────────────────────
     if st.button("⬅️ Back to Main App"):
         st.session_state.page = "main"
         rerun()
