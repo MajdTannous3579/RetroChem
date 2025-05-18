@@ -283,14 +283,6 @@ elif st.session_state.page == "builder":
                                  st.session_state.builder_product,
                                  st.session_state.builder_reactants,
                                  parsed)
-                # register new DB if not already
-                new_file = f"{db_base}.db"
-                try:
-                    new_db = rd.load_database(new_file)
-                    if new_db:
-                        rd.register_database(new_db, db_base)
-                except:
-                    pass
                 # flag for showing Add New Reaction
                 st.session_state.just_saved = True
                 rerun()
