@@ -1,3 +1,6 @@
+#this code is not usable here, it's a parsing tool for the used online database for this project, from the repository 
+#datamol-io https://github.com/datamol-io/datamol
+
 import json
 import os
 
@@ -13,6 +16,7 @@ with open(path) as file:
     for reaction in reactions:
         ret.append(reactions[reaction]['retro_smarts'].replace('\\', '-').replace('/', '-'))
         desc.append(reactions[reaction]['description'])
+
 
 with open("datamol.db", "w") as file:
     file.write('[\n')
