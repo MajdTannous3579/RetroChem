@@ -185,7 +185,7 @@ elif st.session_state.page == 'main':
         st.subheader('🧩 Options')
         combos = st.session_state.combos or []
         if not combos:
-            st.info('No routes found.')
+            st.info('your product is too simple, or not in the chosen database')
         else:
             cols = st.columns(len(combos))
             for i, (s, cond) in enumerate(combos):
@@ -212,14 +212,14 @@ elif st.session_state.page == 'main':
                           on_click=select_fragment,
                           args=(i,))
 
+# DATABASE BUILDER
 elif st.session_state.page == 'builder':
     st.button('🔙 Back to Retrosynthesis',
               key='builder_return_to_main',
               on_click=go_main)
 
-    st.markdown("<div class='builder-panel'>", unsafe_allow_html=True)
     st.header('🛠️ Custom Database Builder')
-
+    st.write('build or edit your databases here, input your reaction paterns and conditions!')
     total_steps = 5
     completed = (
         int(bool(st.session_state.builder_db_name.strip())) +
@@ -243,7 +243,7 @@ elif st.session_state.page == 'builder':
 
     # Step 1: Database Name
     st.subheader('Step 1: Database Name')
-    st.text_input('Name (no .db)', key='builder_db_name')
+    st.text_input('Database name, will be saved as db if new, or edited if already existing', key='builder_db_name')
     st.write('---')
 
     # Step 2: Add Product
@@ -301,6 +301,28 @@ elif st.session_state.page == 'builder':
     )
     st.text_area('Conditions', key='builder_conditions', height=100)
     st.write('---')
+
+    # Reaction preview
+    if st.session_state.builder_product or st.session_state.builder_reactants:
+        st.markdown("## 👁️ Reaction Preview")
+
+        cols = st.columns(len(st.session_state.builder_reactants) + 2)
+        for i, smi in enumerate(st.session_state.builder_reactants):
+            with cols[i]:
+                st.image(MolToImage(Chem.MolFromSmiles(smi), size=(150, 150)))
+                st.caption("Reactant")
+
+        with cols[len(st.session_state.builder_reactants)]:
+            st.markdown("### ➡️")
+
+        if st.session_state.builder_product:
+            with cols[-1]:
+                st.image(MolToImage(Chem.MolFromSmiles(st.session_state.builder_product), size=(150, 150)))
+                st.caption("Product")
+        else:
+            with cols[-1]:
+                st.info("Product not yet defined")
+
 
     # Step 5: Save Reaction
     st.subheader('Step 5: Save Reaction')
