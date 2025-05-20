@@ -1,9 +1,8 @@
-![Project Logo](assets/banner.png)
+![Project Logo](./src/retrochem/logo.png)
 
-![Coverage Status](assets/coverage-badge.svg)
 
 <h1 align="center">
-RetroChem
+RetroChem - Your guide for retro-organic chemistry
 </h1>
 
 <br>
