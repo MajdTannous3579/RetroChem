@@ -9,7 +9,8 @@ RetroChem
 <br>
 
 
-Final Project For Practical Programming in Chemistry
+Final Project For Practical Programming in Chemistry by Fatima A. Majd T. and Serena B.
+Retrochem is a python package and applet, based especially on rdkit and Streamlit, providing functions, databases and interface to give possible retrosynthesis routes for a molecule.
 
 ## ✨ Features
 
@@ -19,40 +20,42 @@ Final Project For Practical Programming in Chemistry
 - **Rule-based Retrosynthesis**  
   Match your target SMILES against a hand-written SMARTS library of fundamental organic disconnections to suggest possible reactants.
 
-- **Curated Organic Chemistry Database**  
-  Includes all the core reactions you learn in your bachelor’s curriculum—esters, amides, acetals, ketone hydrations, reductions, and more.
+- **Curated Organic Chemistry Databases**  
+  "epfl_student.db" Includes all the core reactions you learn in your bachelor’s curriculum—esters, amides, acetals, ketone hydrations, reductions, and more.
+  "data_mol.db" comes from an open source online database, and includes more specific medicinal chemistry reactions and heterocycle construction. more details on their repository: https://github.com/datamol-io/datamol
 
 - **Custom Database Support**  
-  Drop your own `.db` (SMARTS) file into the project root and load it at runtime to extend or override the default reaction set.
+  Create or edit your own `.db` (SMARTS and conditions) file into the project root and load it at runtime to extend or override the default reaction set.
 
+More Details in the report.ipnyb document 
 
-## 🔥 Usage
-
-```python
-from mypackage import main_func
-
-# One line to rule them all
-from functions.py import name_to_smiles, structure_to_smiles, canonicalize_smiles
-from retrochem.reaction_database reverse_reaction_generator, register_database, list_reactants
 
 ## 👩‍💻 Installation
 
-Create a new environment, you may also give the environment a different name. 
+Start by cloning the RetroChem Repository
+
+$ git clone https://github.com/MajdTannous3579/RetroChem
+
+Next, you'll have to install the module with all of its dependencies. Create a new environment, you may also give the environment a different name. 
 
 ```
 conda create -n retrochem python=3.10 
 ```
 
+Now, making sure your terminal is on the root folder of the project, which contains pyproject.toml and the src folder, you can run the following command:
+
 ```
 conda activate retrochem
-(conda_env) $ pip install .
+(conda_env) $ pip install -e.
 ```
 
-If you need jupyter lab, install it 
+if you would like to run the pytest functions, you should also install the corresponding dependencies:
 
-```
-(retrochem) $ pip install jupyterlab
-```
+$ pip install -e. [test]
+
+Retrochem should now be present in your environment, you can use all of our project's functions by importing them in your python files:
+
+from retrochem import ...
 
 
 ## 🛠️ Development installation
