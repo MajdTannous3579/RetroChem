@@ -4,17 +4,14 @@ from rdkit.Chem import rdChemReactions as Reac
 import json
 import os
 
-
 # Set working directory to the script's directory
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(SCRIPT_DIR)
 
-
 SmartsConditionsPair = Tuple[str, dict]
 SmilesConditionsPair= Tuple[str,dict]
 
-
-def reverse_reaction_generator(reaction_smart: SmartsConditionsPair) -> Callable[[str], SmilesConditionsPair | None]:
+def reverse_reaction_generator(reaction_smart: SmartsConditionsPair)->Callable[[str], SmilesConditionsPair | None]:
     rxn = Reac.ReactionFromSmarts(reaction_smart[0])
     cond = reaction_smart[1]
     def reverser_to_smiles(smiles: str) -> str | None:
@@ -25,10 +22,10 @@ def reverse_reaction_generator(reaction_smart: SmartsConditionsPair) -> Callable
             prods = rxn.RunReactants((mol,))
         except Exception:
             return None
-        if not prods:
+        if not prods: # if no products could be generated
             return None
         first = prods[0]
-        first_smiles = [Chem.MolToSmiles(m, canonical=True) for m in first]
+        first_smiles = sorted(Chem.MolToSmiles(m, canonical=True) for m in first)
         combo = ".".join(first_smiles)
         return (combo, cond)
     return reverser_to_smiles
@@ -37,14 +34,13 @@ def load_database(path: str)->List[SmartsConditionsPair] | None:
     try:
         with open(path, "r") as file:
             ret = json.load(file)
+            # TODO: check load result
             return ret
     except:
         return None
 
-
-
 REACTION_DATABASES: dict[str, list[SmartsConditionsPair]] = {}
-REACTION_REVERSERS: dict[str, List[Callable[[str], SmilesConditionsPair | None]]] = {}
+REACTION_REVERSERS: dict[str, List[Callable[[str], SmartsConditionsPair | None]]] = {}
 
 
 def register_database(values: List[SmartsConditionsPair], database: str)->None:
@@ -52,7 +48,6 @@ def register_database(values: List[SmartsConditionsPair], database: str)->None:
     REACTION_REVERSERS[database] = [
         reverse_reaction_generator(i) for i in values
     ]
-
 
 def list_reactants(smiles: str, database: str)->List[SmilesConditionsPair] | None:
     get = REACTION_REVERSERS.get(database)
