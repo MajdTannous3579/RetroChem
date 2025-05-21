@@ -3,12 +3,12 @@ import pandas as pd
 import os
 from rdkit import Chem
 from rdkit.Chem.Draw import MolToImage
-from streamlit_ketcher import st_ketcher  # type: ignore
+from streamlit_ketcher import st_ketcher
 from preliminary_functions import name_to_smiles, canonicalize_smiles
 import reaction_database as rd
 
 # ─── PAGE CONFIG & THEME ─────────────────────────────────────────────────────
-st.set_page_config(page_title="RetroChem", layout="wide", page_icon="🧪")
+st.set_page_config(page_title="RetroChem", layout="wide", page_icon="./logo.png")
 st.markdown("""
     <style>
     h1, h2, h3 { color: #2E7D32 !important; text-align: center; }
@@ -104,7 +104,7 @@ if not rd.REACTION_DATABASES:
 
 # ─── PAGE DISPATCH ───────────────────────────────────────────────────────────
 if st.session_state.page == 'home':
-    st.title('🧪 Welcome to RetroChem')
+    st.title('Welcome to Retrochem')
     st.markdown('Your Organic Chemistry Retrosynthesis Assistant')
     st.write('---')
     st.button('🔬 Start Retrosynthesis',
@@ -113,7 +113,7 @@ if st.session_state.page == 'home':
 
 elif st.session_state.page == 'main':
     refresh_databases()
-    st.title('RetroChem - Your Guide')
+    st.title('RetroChem - Your Retro-Organic Chemistry Guide')
 
     # ─── Sidebar ──────────────────────────────────────────────────────────────
     with st.sidebar:
