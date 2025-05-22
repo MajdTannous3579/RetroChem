@@ -1,7 +1,12 @@
-import io
+from rdkit import Chem
+import os
 import pytest
 
-from retrochem.preliminary_functions import canonicalize_smiles, name_to_smiles
+from retrochem.preliminary_functions import (
+    canonicalize_smiles,
+    name_to_smiles,
+    structure_to_smiles,
+)
 
 """
 Tests for the `canonicalize_smiles` function from `preliminary_functions` module.
@@ -117,4 +122,76 @@ def test_name_to_smiles_network_error(monkeypatch):
     assert "Could not convert name 'ethanol' to SMILES" in str(excinfo.value)
 
 
+"""
+Tests for the `structure_to_smiles` function from `preliminary_functions` module.
 
+The `structure_to_smiles` function is tested under different scenarios to ensure its correctness.
+
+Test Cases:
+Test that passing an RDKit Mol object returns its SMILES string.
+Test that passing a MolBlock string (containing 'M  END') returns the correct SMILES.
+Test that reading from a .mol file on disk returns the correct SMILES.
+Test that giving a file with an unsupported extension raises ValueError.
+Test that passing a string which is neither a file nor a MolBlock raises ValueError.
+Test that passing a non-str, non-Mol (e.g. an integer) raises TypeError.
+Test that a MolBlock which fails to parse (RDKit returns None) raises ValueError.
+
+"""
+
+
+MOLBLOCK = """
+  Mrv2007 07082006022D          
+
+  3  2  0  0  0  0            999 V2000
+    0.0000    0.0000    0.0000 C   0  0
+    1.2094    0.0000    0.0000 C   0  0
+   -0.6070    1.0475    0.0000 O   0  0
+  1  2  1  0
+  1  3  1  0
+M  END
+"""
+
+def test_structure_to_smiles_from_mol_object():
+    """Passing an RDKit Mol should return its SMILES."""
+    mol = Chem.MolFromSmiles("CCO")
+    assert structure_to_smiles(mol) == "CCO"
+
+def test_structure_to_smiles_from_molblock_string():
+    """A string containing a MolBlock (with 'M  END') should parse to non-canonical SMILES."""
+    assert structure_to_smiles(MOLBLOCK) == "C(C)O"
+
+def test_structure_to_smiles_from_file(tmp_path):
+    """A .mol file on disk should be read and converted to non-canonical SMILES."""
+    molfile = tmp_path / "ethanol.mol"
+    molfile.write_text(MOLBLOCK)
+    result = structure_to_smiles(str(molfile), input_format="mol")
+    assert result == "C(C)O"
+
+def test_structure_to_smiles_unsupported_file_extension(tmp_path):
+    """Files with unsupported extensions should raise ValueError."""
+    txt = tmp_path / "foo.txt"
+    txt.write_text(MOLBLOCK)
+    with pytest.raises(ValueError) as exc:
+        structure_to_smiles(str(txt))
+    assert "Unsupported file format" in str(exc.value)
+
+def test_structure_to_smiles_bad_string_input():
+    """A string that is neither a file nor a MolBlock should raise ValueError."""
+    with pytest.raises(ValueError) as exc:
+        structure_to_smiles("not a file or block")
+    assert "neither a valid file path nor a MolBlock" in str(exc.value)
+
+def test_structure_to_smiles_wrong_type():
+    """Passing a non-str, non‐Mol (e.g. an integer) should raise TypeError."""
+    with pytest.raises(TypeError):
+        structure_to_smiles(12345)
+
+def test_structure_to_smiles_parsing_failure(monkeypatch):
+    """
+    If RDKit fails to parse a MolBlock (returns None), we should get ValueError.
+    """
+    # MolBlock branch: string contains 'M  END' but is invalid
+    bad_block = "M  END"
+    with pytest.raises(ValueError) as exc:
+        structure_to_smiles(bad_block)
+    assert "Failed to parse molecular structure" in str(exc.value)
