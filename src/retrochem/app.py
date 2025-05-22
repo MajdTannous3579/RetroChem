@@ -76,6 +76,10 @@ def reset_builder():
     st.session_state.builder_conditions = ''
     st.session_state.just_saved = False
 
+def remove_reactant(idx):
+    """Remove one reactant and rerun so the UI updates."""
+    st.session_state.builder_reactants.pop(idx)
+    st.experimental_rerun()
 
 def handle_db_select():
     sel = st.session_state.main_db_select
@@ -247,9 +251,15 @@ elif st.session_state.page == 'main':
 
 # DATABASE BUILDER
 elif st.session_state.page == 'builder':
-    st.button('🔙 Back to Retrosynthesis',
-              key='builder_return_to_main',
-              on_click=go_main)
+    c1, c2 = st.columns([1,1])
+    with c1:
+        st.button('🔙 Back to Retrosynthesis',
+                  key='builder_return_to_main',
+                  on_click=go_main)
+    with c2:
+        st.button('🧹 Start Over',
+                  key='builder_builder_startover',
+                  on_click=reset_builder)
 
     st.header('🛠️ Custom Database Builder')
     st.write('build or edit your databases here, input your reaction paterns and conditions!')
@@ -318,10 +328,15 @@ elif st.session_state.page == 'builder':
                   on_click=lambda: st.session_state.builder_reactants.append(rs))
 
     if st.session_state.builder_reactants:
-        for r in st.session_state.builder_reactants:
-            mol = Chem.MolFromSmiles(r)
-            st.image(MolToImage(mol, (80,80)))
-    st.write('---')
+    # for each reactant, show it + a remove button
+        cols = st.columns(len(st.session_state.builder_reactants))
+        for idx, smi in enumerate(st.session_state.builder_reactants):
+            with cols[idx]:
+                mol = Chem.MolFromSmiles(smi)
+                st.image(MolToImage(mol, (80,80)))
+                # remove-this-reactant button
+                if st.button('❌', key=f'remove_r{idx}'):
+                    remove_reactant(idx)
 
     # Step 4: Conditions
     st.subheader('Step 4: Conditions')
