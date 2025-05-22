@@ -1,0 +1,18 @@
+## NOTICE
+
+This project includes data derived from the open-source [datamol-io](https://github.com/datamol-io/datamol) project,
+licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). More info on this license in the file LICENSE-APACHE.txt in the root folder of the package.
+
+Specifically, we used the file:
+
+datamol/data/reactions.json
+
+### Modifications Made:
+- Extracted only the `retro_smarts` and `description` fields from the original JSON.
+- Removed stereochemical directionality markers (`/` and `\`) from SMARTS strings to simplify parsing and adapt to our current retrosynthesis engine capabilities.
+- Reformatted the extracted data into a `.db` format compatible with our RetroChem pipeline.
+
+These modifications were made solely to enable integration into the RetroChem educational retrosynthesis tool.
+
+The original repository and license can be found here:
+https://github.com/datamol-io/datamol
