@@ -56,6 +56,9 @@ Retrochem should now be present in your environment, you can use all of our proj
 
 from retrochem import ...
 
+And you can also use the app by directing your terminal to the src\retrochem folder and running:
+
+Streamlit run app.py
 
 ## 🛠️ Development installation
 

@@ -34,7 +34,6 @@ def load_database(path: str)->List[SmartsConditionsPair] | None:
     try:
         with open(path, "r") as file:
             ret = json.load(file)
-            # TODO: check load result
             return ret
     except:
         return None
@@ -49,6 +48,10 @@ def register_database(values: List[SmartsConditionsPair], database: str)->None:
         reverse_reaction_generator(i) for i in values
     ]
 
+def clear_registered_databases():
+    REACTION_DATABASES.clear()
+    REACTION_REVERSERS.clear()
+    
 def list_reactants(smiles: str, database: str)->List[SmilesConditionsPair] | None:
     get = REACTION_REVERSERS.get(database)
     if get is None:

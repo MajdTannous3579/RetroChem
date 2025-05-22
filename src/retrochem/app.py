@@ -79,7 +79,7 @@ def reset_builder():
 def remove_reactant(idx):
     """Remove one reactant and rerun so the UI updates."""
     st.session_state.builder_reactants.pop(idx)
-    st.experimental_rerun()
+    st.rerun()
 
 def handle_db_select():
     sel = st.session_state.main_db_select
@@ -111,6 +111,7 @@ init_state()
 
 # ─── DATABASE MANAGEMENT ─────────────────────────────────────────────────────
 def refresh_databases():
+    rd.clear_registered_databases()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     for fn in os.listdir(script_dir):
         if fn.endswith('.db') and not fn.endswith('.db.db'):
@@ -126,11 +127,15 @@ if not rd.REACTION_DATABASES:
 # ─── PAGE DISPATCH ───────────────────────────────────────────────────────────
 if st.session_state.page == 'home':
     st.title('Welcome to Retrochem')
-    st.markdown('Your Organic Chemistry Retrosynthesis Assistant')
-    st.write('---')
-    st.button('🔬 Start Retrosynthesis',
-              key='home_start_retrosynthesis',
-              on_click=go_main)
+    st.markdown("<p style='text-align: center;'>Your Organic Chemistry Retrosynthesis Assistant</p>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([3.8, 5, 2])
+    with col2:
+        st.image("./logo.png", width = 400)
+    col1, col2, col3 = st.columns([2.3, 1, 2])
+    with col2:
+        st.button('🔬 Start Retrosynthesis',
+                key='home_start_retrosynthesis',
+                on_click=go_main)
 
 elif st.session_state.page == 'main':
     refresh_databases()
@@ -309,7 +314,9 @@ elif st.session_state.page == 'builder':
         mol = Chem.MolFromSmiles(st.session_state.builder_product)
         st.image(MolToImage(mol, (100,100)))
         st.success('✅ Product added')
-    st.write('---')
+        if st.button('🗑️', key='remove_product'):
+            st.session_state.builder_product = None
+            st.rerun()
 
     # Step 3: Add Reactants
     st.subheader('Step 3: Add Reactants')
@@ -334,8 +341,8 @@ elif st.session_state.page == 'builder':
             with cols[idx]:
                 mol = Chem.MolFromSmiles(smi)
                 st.image(MolToImage(mol, (80,80)))
-                # remove-this-reactant button
-                if st.button('❌', key=f'remove_r{idx}'):
+                # remove this reactant button
+                if st.button('🗑️', key=f'remove_r{idx}'):
                     remove_reactant(idx)
 
     # Step 4: Conditions
