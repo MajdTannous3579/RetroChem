@@ -89,3 +89,11 @@ To install the package, run
 ```
 (conda_env) $ pip install tox
 (conda_env) $ tox
+
+Contribution from each team member:
+
+Fatima Abdoun: Coded the frontend (app.py), coded the test files, coded preliminary_fonctions 
+Serena bouchaaya: Wrote most of report and readme, built the epfl_student handmade database.
+Majd Tannous: Set up package structure and environment, Coded the backend (parsing_database, reaction_database), set up licenses and drew logo with photoshop(logo.png).
+
+All team members participated in the preparation of the final presentation.

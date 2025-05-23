@@ -7,7 +7,7 @@ from streamlit_ketcher import st_ketcher
 from preliminary_functions import name_to_smiles, canonicalize_smiles
 import reaction_database as rd
 
-# ─── PAGE CONFIG & THEME ─────────────────────────────────────────────────────
+# -------------- PAGE CONFIG & THEME --------------
 st.set_page_config(page_title="RetroChem", layout="wide", page_icon="./logo.png")
 st.markdown("""
     <style>
@@ -26,8 +26,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ─── CALLBACKS ────────────────────────────────────────────────────────────────
+# -------------- CALLBACKS --------------
 def go_home():
+    """
+    Reset the session state and navigate to the Home page.
+
+    All keys except 'page' are cleared from st.session_state.
+    The default page is set to 'home', and the database registry is refreshed.
+    """
     # Clear all session state except page, then reset to home and reload databases
     for k in list(st.session_state.keys()):
         if k != 'page':
@@ -37,10 +43,20 @@ def go_home():
 
 
 def go_main():
+    """
+    Set the current session state page to 'main'.
+
+    This is used to transition from the Home page to the Retrosynthesis interface.
+    """
     st.session_state.page = 'main'
 
 
 def clear_history():
+    """
+    Clears all retrosynthesis history and related state while keeping the user on the main page.
+
+    Also refreshes the reaction database registry from disk.
+    """
     # Full reset within main: clear all state except page, keep page as main, reload databases
     for k in list(st.session_state.keys()):
         if k != 'page':
@@ -50,19 +66,54 @@ def clear_history():
 
 
 def do_retrosynthesis(smiles, db):
+    """
+    Executes a retrosynthesis step for the given SMILES string using the selected database. Uses backend function list_reactants.
+
+    Parameters
+    ----------
+    smiles : str
+        The SMILES representation of the molecule to analyze.
+    db : str
+        The database name (must match a key in REACTION_DATABASES).
+
+    - Pushes current molecule to history.
+    """
     if st.session_state.get('selected_smiles'):
         st.session_state.history.append(st.session_state.selected_smiles)
     st.session_state.selected_smiles = smiles
     st.session_state.reactant_list = None
-    st.session_state.combos = rd.list_reactants(canonicalize_smiles(smiles), db)
+    st.session_state.combos = rd.list_reactants(smiles, db)
 
 
 def select_option(idx):
+    """
+    Selects a retrosynthesis route by index from `st.session_state.combos`.
+
+    Parameters
+    ----------
+    idx : int
+        Index of the route option selected.
+
+    - Parses the dot-separated reactants into a list.
+    - Stores them in `st.session_state.reactant_list`.
+    """
     s, _ = st.session_state.combos[idx]
     st.session_state.reactant_list = s.split('.')
 
 
 def select_fragment(idx):
+    """
+    Recursively apply retrosynthesis to a selected fragment from the current reactant list.
+
+    Parameters
+    ----------
+    idx : int
+        Index of the reactant fragment to analyze.
+    ----------
+    - Pushes current molecule to history.
+    - Updates `selected_smiles` to the selected fragment.
+    - Triggers a new retrosynthesis search for that fragment.
+    """
     p = st.session_state.reactant_list[idx]
     st.session_state.history.append(st.session_state.selected_smiles)
     st.session_state.selected_smiles = p
@@ -71,17 +122,36 @@ def select_fragment(idx):
 
 
 def reset_builder():
+    """
+    Clears all fields in the custom database builder.
+
+    This includes product, reactants, and conditions.
+    Resets the 'just_saved' flag to allow a fresh entry.
+    """
     st.session_state.builder_product = None
     st.session_state.builder_reactants = []
     st.session_state.builder_conditions = ''
     st.session_state.just_saved = False
 
 def remove_reactant(idx):
-    """Remove one reactant and rerun so the UI updates."""
+    """
+    Removes a single reactant by index from the builder list and re-renders the app.
+
+    Parameters
+    ----------
+    idx : int
+        Index of the reactant to be removed.
+    """
     st.session_state.builder_reactants.pop(idx)
     st.rerun()
 
 def handle_db_select():
+    """
+    Handles user selection from the database selectbox in the sidebar.
+
+    - If 'Add or edit your own database' is selected, redirects to the builder page.
+    - Otherwise sets the selected database in `st.session_state.database`.
+    """
     sel = st.session_state.main_db_select
     add_label = '➕ Add or edit your own database'
     placeholder = 'Select Database'
@@ -91,8 +161,13 @@ def handle_db_select():
         st.session_state.database = sel
 
 
-# ─── SESSION STATE HELPERS ───────────────────────────────────────────────────
+# -------------- SESSION STATE HELPERS --------------
 def init_state():
+    """
+    Initializes default values in Streamlit's session state to ensure a stable initial application state.
+
+    This function should be called once at startup.
+    """
     defaults = {
         'page': 'home',
         'main_name': '', 'main_draw': '',
@@ -109,8 +184,16 @@ def init_state():
 init_state()
 
 
-# ─── DATABASE MANAGEMENT ─────────────────────────────────────────────────────
+# -------------- DATABASE MANAGEMENT --------------
 def refresh_databases():
+    """
+    Scans the current directory for `.db` files, loads them, and registers each one.
+
+    - Uses the backend `load_database` and `register_database` functions.
+    - Populates the global reaction database registry (REACTION_DATABASES and REACTION_REVERSERS).
+
+    This ensures that all valid databases are available for retrosynthesis after any changes.
+    """
     rd.clear_registered_databases()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     for fn in os.listdir(script_dir):
@@ -120,11 +203,12 @@ def refresh_databases():
             if db is not None:
                 rd.register_database(db, fn.removesuffix('.db'))
 
+# Register databases on startup
 if not rd.REACTION_DATABASES:
     refresh_databases()
 
 
-# ─── PAGE DISPATCH ───────────────────────────────────────────────────────────
+# -------------- PAGE DISPATCH --------------
 if st.session_state.page == 'home':
     st.title('Welcome to Retrochem')
     st.markdown("<p style='text-align: center;'>Your Organic Chemistry Retrosynthesis Assistant</p>", unsafe_allow_html=True)
@@ -141,7 +225,7 @@ elif st.session_state.page == 'main':
     refresh_databases()
     st.title('RetroChem - Your Retro-Organic Chemistry Guide')
 
-    # ─── Sidebar ──────────────────────────────────────────────────────────────
+    # -------------- Sidebar --------------
     with st.sidebar:
         st.button('🏠 Return to Home',
                   key='main_return_home',
@@ -170,7 +254,7 @@ elif st.session_state.page == 'main':
             if mol:
                 st.image(MolToImage(mol, (100,100)))
 
-        # ─── Selectbox with on_change ───────────────────────────────────────
+        # -------------- Selectbox with on_change --------------
         dbs     = list(rd.REACTION_DATABASES.keys())
         placeholder   = 'Select Database'
         add_label     = '➕ Add or edit your own database'
@@ -182,7 +266,7 @@ elif st.session_state.page == 'main':
                      on_change=handle_db_select)
         st.markdown(f"**Current DB:** {st.session_state.database or '_(none)_'}")
 
-    # ─── Main Panel ────────────────────────────────────────────────────────────
+    # -------------- Main Panel --------------
     st.write('---')
     st.subheader('🧬 Input Molecule')
     mode = st.radio('Mode', ['Name','Draw'], horizontal=True)
@@ -215,8 +299,7 @@ elif st.session_state.page == 'main':
                   args=(smiles, st.session_state.database))
 
     if st.session_state.selected_smiles and not st.session_state.reactant_list:
-        st.subheader('🧩 Options')
-
+        st.subheader('📊 Options')
     # Require a database first
         if not st.session_state.database:
             st.warning('🚨 Please select a database before retrosynthesizing.')
