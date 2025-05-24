@@ -13,9 +13,6 @@ from retrochem.reaction_database import (
 )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Global setup/teardown
-# ──────────────────────────────────────────────────────────────────────────────
 def setup_function(function):
     """Clear global state before each test."""
     REACTION_DATABASES.clear()
@@ -167,7 +164,18 @@ def test_register_database_overwrite():
     # Ensure it’s the new function, not leftover from initial
     assert callable(REACTION_REVERSERS["db3"][0])
 
+"""
+Tests for the `clear_registered_databases` function from the `reaction_database` module.
 
+"""
+def test_clear_registered_databases():
+    register_database([("CC>>C.C", {})], "dummy")
+    assert "dummy" in REACTION_DATABASES
+    from retrochem.reaction_database import clear_registered_databases
+    clear_registered_databases()
+    assert REACTION_DATABASES == {}
+    assert REACTION_REVERSERS == {}
+    
 
 """
 Tests for the `list_reactants` function from the `reaction_database` module.
